@@ -44,12 +44,11 @@ These 3 data types were created for BI-BAT, but may be used elsewhere:
   * `0x03` = Unmanaged floppy disk
   * `0x04` = EEPROM
   * `0xF0-0xFF` = Test data
-  More codes can be added (application-specific)
+  * More codes can be added (application-specific)
 * (Boolean) Is this session encrypted?
 * (String) Password hint (Optional - use empty string if no hint)
-* (Int) Pre-compression delta-coding block size (In bits, constrained between 0 and 256, Disabled = 0)
-* (Int) Post-compression delta-coding block size (In bits, constrained between 0 and 256, Disabled = 0)
-Previous 2 values are selected to make chunks as small as possible
+* (Byte) Pre-compression delta-coding configuration
+* (Byte) Post-compression delta-coding configuration
 * (Int) Number of chunks
 * (Chunk[]) Data chunks, no separators
 
@@ -63,13 +62,16 @@ Session data is split up into 'chunks' such that the **uncompressed data** of ea
 
 ### Compression method
 
-With the specific implementation of delta coding used for this storage medium, it is better to think of the data not as a byte stream, but rather as a bit stream (MSB first). To encode a data stream, the output bit at a given tick should be the XOR of the input bit and the input bit `block_size` ticks ago. To decode a data stream, the output bit at a given tick should be the XOR of the input bit and the output bit `block_size` ticks ago.
+The specific implementation of delta coding used for this storage medium works on 2 stages; bytewise followed by bitwise for the encoding process, bitwise followed by bytewise for the decoding process. The "configuration byte" for each obfuscation stage represents the size of each "block" in bytes.
 
-The encoding process is shown below, reverse the process to decode:
+Obfuscation cycle:
+* Next input block
+* Output block = Input block XOR Buffer block
+* Buffer block = Input block if encoding, Output block if decoding
+
+The encoding process for a given chunk is shown below, reverse the process to decode:
 
 * If encryption is enabled:
-  * Ask user for password
-  * Generate SHA-256 hash of password
   * Encrypt data (AES, using hash as key)
 * Repeat with all possible configurations, for smallest size:
   * If pre-compression delta coding is enabled:
